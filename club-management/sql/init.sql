@@ -2,6 +2,7 @@ CREATE DATABASE IF NOT EXISTS club_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8
 
 USE club_db;
 
+DROP TABLE IF EXISTS club;
 DROP TABLE IF EXISTS user;
 
 CREATE TABLE user (
@@ -14,7 +15,25 @@ CREATE TABLE user (
     INDEX idx_username (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE club (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    logo VARCHAR(255),
+    description TEXT,
+    created_date DATE NOT NULL,
+    status INT NOT NULL DEFAULT 1 COMMENT '1: 正常, 0: 禁用',
+    president_id BIGINT NOT NULL,
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_president_id (president_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO user (username, password, role) VALUES
 ('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'ADMIN'),
 ('president1', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'PRESIDENT'),
 ('member1', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'MEMBER');
+
+INSERT INTO club (name, logo, description, created_date, status, president_id) VALUES
+('计算机协会', 'https://example.com/computer.jpg', '计算机协会是一个致力于推广计算机技术和编程文化的学术性社团。', '2024-01-15', 1, 2),
+('摄影协会', 'https://example.com/photo.jpg', '摄影协会聚集了一群热爱摄影的同学，共同探索光影艺术的魅力。', '2024-02-20', 1, 2);
