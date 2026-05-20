@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.sau.mapper.ActivityMapper">
+    <select id="findById" resultType="cn.sau.domain.Activity">
+        SELECT a.*, c.name as club_name
+        FROM activity a
+        LEFT JOIN club c ON a.club_id = c.id
+        WHERE a.id = #{id}
+    </select>
+
+    <select id="findAll" resultType="cn.sau.domain.Activity">
+        SELECT a.*, c.name as club_name
+        FROM activity a
+        LEFT JOIN club c ON a.club_id = c.id
+        ORDER BY a.start_time DESC
+    </select>
+
+    <select id="findByClubId" resultType="cn.sau.domain.Activity">
+        SELECT a.*, c.name as club_name
+        FROM activity a
+        LEFT JOIN club c ON a.club_id = c.id
+        WHERE a.club_id = #{clubId}
+        ORDER BY a.start_time DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO activity (club_id, title, content, location, start_time, end_time, max_participants, current_participants, check_in_code, create_time, update_time)
+        VALUES (#{clubId}, #{title}, #{content}, #{location}, #{startTime}, #{endTime}, #{maxParticipants}, 0, #{checkInCode}, NOW(), NOW())
+    </insert>
+
+    <update id="update">
+        UPDATE activity
+        SET title = #{title},
+            content = #{content},
+            location = #{location},
+            start_time = #{startTime},
+            end_time = #{endTime},
+            max_participants = #{maxParticipants},
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM activity WHERE id = #{id}
+    </delete>
+</mapper>

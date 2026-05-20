@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.sau.mapper.ActivityRegistrationMapper">
+    <select id="findById" resultType="cn.sau.domain.ActivityRegistration">
+        SELECT ar.*, u.username, a.title as activity_title
+        FROM activity_registration ar
+        LEFT JOIN user u ON ar.user_id = u.id
+        LEFT JOIN activity a ON ar.activity_id = a.id
+        WHERE ar.id = #{id}
+    </select>
+
+    <select id="findByActivityIdAndUserId" resultType="cn.sau.domain.ActivityRegistration">
+        SELECT * FROM activity_registration WHERE activity_id = #{activityId} AND user_id = #{userId}
+    </select>
+
+    <select id="findByActivityId" resultType="cn.sau.domain.ActivityRegistration">
+        SELECT ar.*, u.username, a.title as activity_title
+        FROM activity_registration ar
+        LEFT JOIN user u ON ar.user_id = u.id
+        LEFT JOIN activity a ON ar.activity_id = a.id
+        WHERE ar.activity_id = #{activityId}
+        ORDER BY ar.register_time DESC
+    </select>
+
+    <select id="findByUserId" resultType="cn.sau.domain.ActivityRegistration">
+        SELECT ar.*, u.username, a.title as activity_title
+        FROM activity_registration ar
+        LEFT JOIN user u ON ar.user_id = u.id
+        LEFT JOIN activity a ON ar.activity_id = a.id
+        WHERE ar.user_id = #{userId}
+        ORDER BY ar.register_time DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO activity_registration (activity_id, user_id, register_time, create_time, update_time)
+        VALUES (#{activityId}, #{userId}, NOW(), NOW(), NOW())
+    </insert>
+
+    <delete id="deleteByActivityIdAndUserId">
+        DELETE FROM activity_registration WHERE activity_id = #{activityId} AND user_id = #{userId}
+    </delete>
+
+    <select id="countByActivityId" resultType="int">
+        SELECT COUNT(*) FROM activity_registration WHERE activity_id = #{activityId}
+    </select>
+</mapper>
