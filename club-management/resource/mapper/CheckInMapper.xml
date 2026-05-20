@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.sau.mapper.CheckInMapper">
+    <select id="findById" resultType="cn.sau.domain.CheckIn">
+        SELECT ci.*, u.username, a.title as activity_title
+        FROM check_in ci
+        LEFT JOIN user u ON ci.user_id = u.id
+        LEFT JOIN activity a ON ci.activity_id = a.id
+        WHERE ci.id = #{id}
+    </select>
+
+    <select id="findByActivityIdAndUserId" resultType="cn.sau.domain.CheckIn">
+        SELECT * FROM check_in WHERE activity_id = #{activityId} AND user_id = #{userId}
+    </select>
+
+    <select id="findByActivityId" resultType="cn.sau.domain.CheckIn">
+        SELECT ci.*, u.username, a.title as activity_title
+        FROM check_in ci
+        LEFT JOIN user u ON ci.user_id = u.id
+        LEFT JOIN activity a ON ci.activity_id = a.id
+        WHERE ci.activity_id = #{activityId}
+        ORDER BY ci.check_in_time DESC
+    </select>
+
+    <select id="findByUserId" resultType="cn.sau.domain.CheckIn">
+        SELECT ci.*, u.username, a.title as activity_title
+        FROM check_in ci
+        LEFT JOIN user u ON ci.user_id = u.id
+        LEFT JOIN activity a ON ci.activity_id = a.id
+        WHERE ci.user_id = #{userId}
+        ORDER BY ci.check_in_time DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO check_in (activity_id, user_id, check_in_time, create_time)
+        VALUES (#{activityId}, #{userId}, NOW(), NOW())
+    </insert>
+
+    <select id="countByActivityId" resultType="int">
+        SELECT COUNT(*) FROM check_in WHERE activity_id = #{activityId}
+    </select>
+</mapper>
