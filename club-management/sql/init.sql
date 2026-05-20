@@ -2,6 +2,8 @@ CREATE DATABASE IF NOT EXISTS club_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8
 
 USE club_db;
 
+DROP TABLE IF EXISTS activity_registration;
+DROP TABLE IF EXISTS activity;
 DROP TABLE IF EXISTS club_member;
 DROP TABLE IF EXISTS club;
 DROP TABLE IF EXISTS user;
@@ -44,6 +46,35 @@ CREATE TABLE club_member (
     UNIQUE KEY uk_club_user (club_id, user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE activity (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    club_id BIGINT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    location VARCHAR(200),
+    start_time DATETIME NOT NULL,
+    end_time DATETIME,
+    max_participants INT,
+    current_participants INT NOT NULL DEFAULT 0,
+    check_in_code VARCHAR(6) NOT NULL,
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_club_id (club_id),
+    INDEX idx_start_time (start_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE activity_registration (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    activity_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    register_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_activity_id (activity_id),
+    INDEX idx_user_id (user_id),
+    UNIQUE KEY uk_activity_user (activity_id, user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO user (username, password, role) VALUES
 ('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'ADMIN'),
 ('president1', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'PRESIDENT'),
@@ -57,3 +88,10 @@ INSERT INTO club_member (club_id, user_id, status, join_date) VALUES
 (1, 2, 1, '2024-01-15'),
 (2, 2, 1, '2024-02-20'),
 (1, 3, 1, '2024-03-01');
+
+INSERT INTO activity (club_id, title, content, location, start_time, end_time, max_participants, check_in_code) VALUES
+(1, 'Java编程入门讲座', '本次讲座面向编程初学者，介绍Java语言的基础知识和开发环境搭建。', '教学楼A201', '2026-06-01 14:00:00', '2026-06-01 16:00:00', 50, 'AB3CD5'),
+(2, '校园风景摄影大赛', '面向全校同学征集校园风景摄影作品，评选出优秀作品并举办展览。', '校园内', '2026-06-15 09:00:00', '2026-06-15 17:00:00', 100, 'EF7GH9');
+
+INSERT INTO activity_registration (activity_id, user_id, register_time) VALUES
+(1, 3, '2026-05-18 10:30:00');
