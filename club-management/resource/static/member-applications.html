@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>申请审核 - 社团管理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="navbar">
+            <h1>社团管理系统</h1>
+            <nav>
+                <a href="/static/index.html" class="nav-link">首页</a>
+                <a href="/static/club-list.html" class="nav-link">社团</a>
+            </nav>
+            <div class="user-area">
+                <span id="navUsername" class="hidden"></span>
+                <button id="navLogout" onclick="logout()" class="btn btn-sm hidden">退出</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="section">
+                <h2>待审核申请</h2>
+                <div id="pendingList" class="card-grid">
+                    <p class="loading">加载中...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/js/common.js"></script>
+    <script>
+        function updateNav() {
+            const user = getUser();
+            if (!user || (user.role !== 'PRESIDENT' && user.role !== 'ADMIN')) {
+                window.location.href = '/static/index.html';
+                return;
+            }
+            document.getElementById('navUsername').textContent = user.username;
+            document.getElementById('navUsername').classList.remove('hidden');
+            document.getElementById('navLogout').classList.remove('hidden');
+        }
+
+        async function loadPending() {
+            try {
+                const res = await fetch('/api/member/pending', { credentials: 'include' });
+                const data = await res.json();
+                const div = document.getElementById('pendingList');
+                if (data.code === 200 && data.data.length > 0) {
+                    div.innerHTML = data.data.map(m =>
+                        '<div class="card" id="member-' + m.id + '">' +
+                        '<p><strong>用户：</strong>' + escapeHtml(m.username || '') + '</p>' +
+                        '<p><strong>社团：</strong>' + escapeHtml(m.clubName || '') + '</p>' +
+                        '<p><strong>申请时间：</strong>' + (m.createTime ? formatTime(m.createTime) : '') + '</p>' +
+                        '<div class="btn-group">' +
+                        '<button onclick="approve(' + m.id + ')" class="btn btn-sm btn-primary">通过</button>' +
+                        '<button onclick="reject(' + m.id + ')" class="btn btn-sm btn-danger">拒绝</button>' +
+                        '</div>' +
+                        '</div>'
+                    ).join('');
+                } else {
+                    div.innerHTML = '<p>暂无待审核申请</p>';
+                }
+            } catch (e) {
+                document.getElementById('pendingList').innerHTML = '<p>加载失败</p>';
+            }
+        }
+
+        async function approve(id) {
+            try {
+                const res = await fetch('/api/member/approve/' + id, { method: 'PUT' });
+                const data = await res.json();
+                if (data.code === 200) {
+                    document.getElementById('member-' + id).remove();
+                    if (!document.querySelector('#pendingList .card')) {
+                        document.getElementById('pendingList').innerHTML = '<p>暂无待审核申请</p>';
+                    }
+                } else {
+                    alert(data.msg);
+                }
+            } catch (e) { alert('网络错误'); }
+        }
+
+        async function reject(id) {
+            try {
+                const res = await fetch('/api/member/reject/' + id, { method: 'PUT' });
+                const data = await res.json();
+                if (data.code === 200) {
+                    document.getElementById('member-' + id).remove();
+                    if (!document.querySelector('#pendingList .card')) {
+                        document.getElementById('pendingList').innerHTML = '<p>暂无待审核申请</p>';
+                    }
+                } else {
+                    alert(data.msg);
+                }
+            } catch (e) { alert('网络错误'); }
+        }
+
+        updateNav();
+        loadPending();
+    </script>
+</body>
+</html>
