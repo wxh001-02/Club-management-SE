@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活动详情 - 社团管理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="navbar">
+            <h1>社团管理系统</h1>
+            <nav>
+                <a href="/static/index.html" class="nav-link">首页</a>
+                <a href="/static/club-list.html" class="nav-link">社团</a>
+                <a href="/static/activity-list.html" class="nav-link">活动</a>
+            </nav>
+            <div class="user-area">
+                <span id="navUsername" class="hidden"></span>
+                <a href="/static/login.html" id="navLogin" class="btn btn-sm">登录</a>
+                <button id="navLogout" onclick="logout()" class="btn btn-sm hidden">退出</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="section">
+                <a href="/static/activity-list.html" class="btn btn-link">&larr; 返回活动列表</a>
+                <div id="activityDetail">
+                    <p class="loading">加载中...</p>
+                </div>
+                <div id="actionButtons" class="action-bar" style="display:none">
+                    <button id="registerBtn" onclick="registerActivity()" class="btn btn-primary">报名参加</button>
+                    <button id="cancelRegisterBtn" onclick="cancelRegistration()" class="btn btn-danger" style="display:none">取消报名</button>
+                </div>
+            </section>
+
+            <section id="registrationSection" class="section" style="display:none">
+                <h3>报名列表</h3>
+                <div id="registrationList" class="card-grid"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/js/common.js"></script>
+    <script>
+        let activityId = null;
+        let activityData = null;
+
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        function updateNav() {
+            const user = getUser();
+            if (user) {
+                document.getElementById('navUsername').textContent = user.username;
+                document.getElementById('navUsername').classList.remove('hidden');
+                document.getElementById('navLogin').classList.add('hidden');
+                document.getElementById('navLogout').classList.remove('hidden');
+            }
+        }
+
+        async function loadDetail() {
+            activityId = getQueryParam('id');
+            if (!activityId) { window.location.href = '/static/activity-list.html'; return; }
+
+            const res = await fetch('/api/activity/' + activityId);
+            const data = await res.json();
+            if (data.code !== 200) { document.getElementById('activityDetail').innerHTML = '<p>活动不存在</p>'; return; }
+
+            activityData = data.data;
+            document.getElementById('activityDetail').innerHTML =
+                '<h2>' + escapeHtml(activityData.title) + '</h2>' +
+                '<p><strong>社团：</strong>' + escapeHtml(activityData.clubName || '') + '</p>' +
+                '<p><strong>地点：</strong>' + escapeHtml(activityData.location || '') + '</p>' +
+                '<p><strong>开始时间：</strong>' + formatTime(activityData.startTime) + '</p>' +
+                '<p><strong>结束时间：</strong>' + formatTime(activityData.endTime) + '</p>' +
+                '<p><strong>人数：</strong>' + (activityData.currentParticipants || 0) + '/' + (activityData.maxParticipants || '不限') + '</p>' +
+                '<div class="content-box">' + escapeHtml(activityData.content || '') + '</div>';
+
+            const user = getUser();
+            if (user) {
+                document.getElementById('actionButtons').style.display = '';
+                document.getElementById('registrationSection').style.display = '';
+                checkRegistration();
+                loadRegistrations();
+            }
+        }
+
+        async function checkRegistration() {
+            try {
+                const res = await fetch('/api/activity/my-registrations', { credentials: 'include' });
+                const data = await res.json();
+                if (data.code === 200) {
+                    const found = data.data.find(r => r.activityId == activityId);
+                    if (found) {
+                        document.getElementById('registerBtn').style.display = 'none';
+                        document.getElementById('cancelRegisterBtn').style.display = '';
+                    }
+                }
+            } catch (e) {}
+        }
+
+        async function loadRegistrations() {
+            const res = await fetch('/api/activity/' + activityId + '/registrations');
+            const data = await res.json();
+            const div = document.getElementById('registrationList');
+            if (data.code === 200 && data.data.length > 0) {
+                div.innerHTML = data.data.map(r =>
+                    '<div class="card"><p><strong>' + escapeHtml(r.username || '') + '</strong></p><p>' + formatTime(r.registerTime) + '</p></div>'
+                ).join('');
+            } else {
+                div.innerHTML = '<p>暂无报名</p>';
+            }
+        }
+
+        async function registerActivity() {
+            if (!checkLogin()) { window.location.href = '/static/login.html'; return; }
+            try {
+                const res = await fetch('/api/activity/' + activityId + '/register', { method: 'POST' });
+                const data = await res.json();
+                if (data.code === 200) {
+                    alert('报名成功！');
+                    location.reload();
+                } else {
+                    alert(data.msg);
+                }
+            } catch (e) { alert('网络错误'); }
+        }
+
+        async function cancelRegistration() {
+            try {
+                const res = await fetch('/api/activity/' + activityId + '/register', { method: 'DELETE' });
+                const data = await res.json();
+                if (data.code === 200) {
+                    alert('已取消报名');
+                    location.reload();
+                } else {
+                    alert(data.msg);
+                }
+            } catch (e) { alert('网络错误'); }
+        }
+
+        updateNav();
+        loadDetail();
+    </script>
+</body>
+</html>
