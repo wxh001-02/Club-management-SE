@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社团管理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="navbar">
+            <h1>社团管理系统</h1>
+            <nav id="mainNav">
+                <a href="/static/index.html" class="nav-link active">首页</a>
+                <a href="/static/club-list.html" class="nav-link">社团</a>
+                <a href="/static/activity-list.html" class="nav-link">活动</a>
+                <a href="/static/check-in.html" class="nav-link">签到</a>
+            </nav>
+            <div class="user-area">
+                <span id="navUsername" class="hidden"></span>
+                <a href="/static/login.html" id="navLogin" class="btn btn-sm">登录</a>
+                <button id="navLogout" onclick="logout()" class="btn btn-sm hidden">退出</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="hero">
+                <h2>欢迎来到社团管理系统</h2>
+                <p>发现精彩社团，参与丰富活动</p>
+            </section>
+
+            <section class="section">
+                <h3>最新社团</h3>
+                <div id="indexClubs" class="card-grid">
+                    <p class="loading">加载中...</p>
+                </div>
+                <a href="/static/club-list.html" class="btn btn-link">查看全部社团 →</a>
+            </section>
+
+            <section class="section">
+                <h3>近期活动</h3>
+                <div id="indexActivities" class="card-grid">
+                    <p class="loading">加载中...</p>
+                </div>
+                <a href="/static/activity-list.html" class="btn btn-link">查看全部活动 →</a>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 社团管理系统</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/common.js"></script>
+    <script>
+        function updateNav() {
+            const user = getUser();
+            if (user) {
+                document.getElementById('navUsername').textContent = user.username;
+                document.getElementById('navUsername').classList.remove('hidden');
+                document.getElementById('navLogin').classList.add('hidden');
+                document.getElementById('navLogout').classList.remove('hidden');
+            }
+        }
+
+        async function loadIndex() {
+            updateNav();
+
+            try {
+                const clubsRes = await fetch('/api/club');
+                const clubsData = await clubsRes.json();
+                const clubsDiv = document.getElementById('indexClubs');
+                if (clubsData.code === 200 && clubsData.data.length > 0) {
+                    clubsDiv.innerHTML = clubsData.data.slice(0, 4).map(c =>
+                        '<div class="card"><h4>' + escapeHtml(c.name) + '</h4><p>' + escapeHtml(c.description || '') + '</p></div>'
+                    ).join('');
+                } else {
+                    clubsDiv.innerHTML = '<p>暂无社团</p>';
+                }
+            } catch (e) {
+                document.getElementById('indexClubs').innerHTML = '<p>加载失败</p>';
+            }
+
+            try {
+                const actRes = await fetch('/api/activity');
+                const actData = await actRes.json();
+                const actDiv = document.getElementById('indexActivities');
+                if (actData.code === 200 && actData.data.length > 0) {
+                    actDiv.innerHTML = actData.data.slice(0, 4).map(a =>
+                        '<div class="card"><h4>' + escapeHtml(a.title) + '</h4><p>地点：' + escapeHtml(a.location || '') + '</p></div>'
+                    ).join('');
+                } else {
+                    actDiv.innerHTML = '<p>暂无活动</p>';
+                }
+            } catch (e) {
+                document.getElementById('indexActivities').innerHTML = '<p>加载失败</p>';
+            }
+        }
+
+        loadIndex();
+    </script>
+</body>
+</html>
