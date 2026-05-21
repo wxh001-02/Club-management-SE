@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建社团 - 社团管理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="navbar">
+            <h1>社团管理系统</h1>
+            <nav>
+                <a href="/static/index.html" class="nav-link">首页</a>
+                <a href="/static/club-list.html" class="nav-link">社团</a>
+            </nav>
+            <div class="user-area">
+                <span id="navUsername" class="hidden"></span>
+                <button id="navLogout" onclick="logout()" class="btn btn-sm hidden">退出</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="form-section">
+                <h2>创建社团</h2>
+                <form id="clubForm" onsubmit="handleSubmit(event)">
+                    <div class="form-group">
+                        <label for="name">社团名称 <span class="required">*</span></label>
+                        <input type="text" id="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="logo">社团Logo（URL）</label>
+                        <input type="text" id="logo" class="form-control" placeholder="可选，图片链接地址">
+                    </div>
+                    <div class="form-group">
+                        <label for="description">社团描述</label>
+                        <textarea id="description" class="form-control" rows="5" placeholder="介绍一下社团的宗旨和活动"></textarea>
+                    </div>
+                    <div id="formError" class="error-msg hidden"></div>
+                    <div class="form-actions">
+                        <a href="/static/club-list.html" class="btn">取消</a>
+                        <button type="submit" class="btn btn-primary">创建社团</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/js/common.js"></script>
+    <script>
+        function updateNav() {
+            const user = getUser();
+            if (!user) { window.location.href = '/static/login.html'; return; }
+            document.getElementById('navUsername').textContent = user.username;
+            document.getElementById('navUsername').classList.remove('hidden');
+            document.getElementById('navLogout').classList.remove('hidden');
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            const errorDiv = document.getElementById('formError');
+            errorDiv.classList.add('hidden');
+
+            const club = {
+                name: document.getElementById('name').value,
+                logo: document.getElementById('logo').value || null,
+                description: document.getElementById('description').value || null
+            };
+
+            try {
+                const res = await fetch('/api/club', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(club)
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    window.location.href = '/static/club-detail.html?id=' + data.data.id;
+                } else {
+                    errorDiv.textContent = data.msg;
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorDiv.textContent = '网络错误';
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        updateNav();
+    </script>
+</body>
+</html>

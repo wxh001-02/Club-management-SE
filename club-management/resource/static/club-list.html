@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社团列表 - 社团管理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="navbar">
+            <h1>社团管理系统</h1>
+            <nav>
+                <a href="/static/index.html" class="nav-link">首页</a>
+                <a href="/static/club-list.html" class="nav-link active">社团</a>
+                <a href="/static/activity-list.html" class="nav-link">活动</a>
+                <a href="/static/check-in.html" class="nav-link">签到</a>
+            </nav>
+            <div class="user-area">
+                <span id="navUsername" class="hidden"></span>
+                <a href="/static/login.html" id="navLogin" class="btn btn-sm">登录</a>
+                <button id="navLogout" onclick="logout()" class="btn btn-sm hidden">退出</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="section">
+                <div class="section-header">
+                    <h2>社团列表</h2>
+                    <a href="/static/club-form.html" class="btn btn-primary" id="createClubBtn" style="display:none">创建社团</a>
+                </div>
+                <div id="clubList" class="card-grid">
+                    <p class="loading">加载中...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/js/common.js"></script>
+    <script>
+        async function loadClubs() {
+            const res = await fetch('/api/club');
+            const data = await res.json();
+            const div = document.getElementById('clubList');
+            if (data.code === 200 && data.data.length > 0) {
+                div.innerHTML = data.data.map(c =>
+                    '<div class="card">' +
+                    '<h4>' + escapeHtml(c.name) + '</h4>' +
+                    '<p>' + escapeHtml((c.description || '').substring(0, 100)) + '</p>' +
+                    '<p><strong>创建日期：</strong>' + (c.createdDate || '') + '</p>' +
+                    '<p><strong>社长：</strong>' + escapeHtml(c.presidentName || '') + '</p>' +
+                    '<a href="/static/club-detail.html?id=' + c.id + '" class="btn btn-sm">查看详情</a>' +
+                    '</div>'
+                ).join('');
+            } else {
+                div.innerHTML = '<p>暂无社团</p>';
+            }
+        }
+
+        function updateNav() {
+            const user = getUser();
+            if (user) {
+                document.getElementById('navUsername').textContent = user.username;
+                document.getElementById('navUsername').classList.remove('hidden');
+                document.getElementById('navLogin').classList.add('hidden');
+                document.getElementById('navLogout').classList.remove('hidden');
+                document.getElementById('createClubBtn').style.display = '';
+            }
+        }
+
+        updateNav();
+        loadClubs();
+    </script>
+</body>
+</html>
