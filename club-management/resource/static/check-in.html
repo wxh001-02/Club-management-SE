@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活动签到 - 社团管理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="navbar">
+            <h1>社团管理系统</h1>
+            <nav>
+                <a href="/static/index.html" class="nav-link">首页</a>
+                <a href="/static/club-list.html" class="nav-link">社团</a>
+                <a href="/static/activity-list.html" class="nav-link">活动</a>
+                <a href="/static/check-in.html" class="nav-link active">签到</a>
+            </nav>
+            <div class="user-area">
+                <span id="navUsername" class="hidden"></span>
+                <a href="/static/login.html" id="navLogin" class="btn btn-sm">登录</a>
+                <button id="navLogout" onclick="logout()" class="btn btn-sm hidden">退出</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="section">
+                <h2>活动签到</h2>
+                <div class="form-section">
+                    <div class="form-group">
+                        <label for="activitySelect">选择活动</label>
+                        <select id="activitySelect" class="form-control" onchange="loadActivityInfo()">
+                            <option value="">请选择活动</option>
+                        </select>
+                    </div>
+                    <div id="activityInfo" class="info-box hidden"></div>
+                    <div class="form-group">
+                        <label for="checkInCode">签到码</label>
+                        <input type="text" id="checkInCode" class="form-control" placeholder="请输入签到码">
+                    </div>
+                    <button onclick="submitCheckIn()" class="btn btn-primary">提交签到</button>
+                    <div id="checkInMsg" class="hidden" style="margin-top:1rem"></div>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3>我的签到记录</h3>
+                <div id="myCheckIns" class="card-grid">
+                    <p class="loading">加载中...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/js/common.js"></script>
+    <script>
+        function updateNav() {
+            const user = getUser();
+            if (user) {
+                document.getElementById('navUsername').textContent = user.username;
+                document.getElementById('navUsername').classList.remove('hidden');
+                document.getElementById('navLogin').classList.add('hidden');
+                document.getElementById('navLogout').classList.remove('hidden');
+                loadMyCheckIns();
+            }
+        }
+
+        async function loadActivities() {
+            const res = await fetch('/api/activity');
+            const data = await res.json();
+            const select = document.getElementById('activitySelect');
+            if (data.code === 200) {
+                data.data.forEach(a => {
+                    select.innerHTML += '<option value="' + a.id + '" data-info=\'' + JSON.stringify({title:a.title,location:a.location,time:formatTime(a.startTime)}) + '\'>' + escapeHtml(a.title) + '</option>';
+                });
+            }
+        }
+
+        function loadActivityInfo() {
+            const select = document.getElementById('activitySelect');
+            const opt = select.selectedOptions[0];
+            const infoDiv = document.getElementById('activityInfo');
+            if (opt && opt.dataset.info) {
+                const info = JSON.parse(opt.dataset.info);
+                infoDiv.innerHTML = '<p><strong>' + escapeHtml(info.title) + '</strong> | 地点：' + escapeHtml(info.location) + ' | 时间：' + info.time + '</p>';
+                infoDiv.classList.remove('hidden');
+            } else {
+                infoDiv.classList.add('hidden');
+            }
+        }
+
+        async function submitCheckIn() {
+            if (!checkLogin()) { window.location.href = '/static/login.html'; return; }
+
+            const activityId = document.getElementById('activitySelect').value;
+            const code = document.getElementById('checkInCode').value;
+            const msgDiv = document.getElementById('checkInMsg');
+
+            if (!activityId) { msgDiv.innerHTML = '<p class="error-msg">请选择活动</p>'; msgDiv.classList.remove('hidden'); return; }
+            if (!code) { msgDiv.innerHTML = '<p class="error-msg">请输入签到码</p>'; msgDiv.classList.remove('hidden'); return; }
+
+            try {
+                const res = await fetch('/api/checkin/' + activityId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    msgDiv.innerHTML = '<p class="success-msg">签到成功！</p>';
+                    msgDiv.classList.remove('hidden');
+                    loadMyCheckIns();
+                } else {
+                    msgDiv.innerHTML = '<p class="error-msg">' + data.msg + '</p>';
+                    msgDiv.classList.remove('hidden');
+                }
+            } catch (e) {
+                msgDiv.innerHTML = '<p class="error-msg">网络错误</p>';
+                msgDiv.classList.remove('hidden');
+            }
+        }
+
+        async function loadMyCheckIns() {
+            try {
+                const res = await fetch('/api/checkin/my', { credentials: 'include' });
+                const data = await res.json();
+                const div = document.getElementById('myCheckIns');
+                if (data.code === 200 && data.data.length > 0) {
+                    div.innerHTML = data.data.map(c =>
+                        '<div class="card"><p><strong>活动：</strong>' + escapeHtml(c.activityTitle || '活动' + c.activityId) + '</p><p><strong>签到时间：</strong>' + formatTime(c.checkInTime) + '</p></div>'
+                    ).join('');
+                } else {
+                    div.innerHTML = '<p>暂无签到记录</p>';
+                }
+            } catch (e) {
+                document.getElementById('myCheckIns').innerHTML = '<p>加载失败</p>';
+            }
+        }
+
+        updateNav();
+        loadActivities();
+    </script>
+</body>
+</html>

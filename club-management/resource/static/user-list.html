@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 社团管理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="navbar">
+            <h1>社团管理系统</h1>
+            <nav>
+                <a href="/static/index.html" class="nav-link">首页</a>
+                <a href="/static/club-list.html" class="nav-link">社团</a>
+                <a href="/static/activity-list.html" class="nav-link">活动</a>
+            </nav>
+            <div class="user-area">
+                <span id="navUsername" class="hidden"></span>
+                <button id="navLogout" onclick="logout()" class="btn btn-sm hidden">退出</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="section">
+                <h2>用户管理</h2>
+                <div class="table-container">
+                    <table id="userTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>用户名</th>
+                                <th>角色</th>
+                                <th>注册时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="5" class="loading">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div id="editModal" class="modal hidden">
+                <div class="modal-content">
+                    <span class="close" onclick="closeModal('editModal')">&times;</span>
+                    <h2>编辑用户</h2>
+                    <form id="editForm" onsubmit="handleEdit(event)">
+                        <input type="hidden" id="editUserId">
+                        <div class="form-group">
+                            <label>用户名</label>
+                            <input type="text" id="editUsername" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>角色</label>
+                            <select id="editRole" class="form-control">
+                                <option value="MEMBER">普通成员</option>
+                                <option value="PRESIDENT">社长</option>
+                                <option value="ADMIN">管理员</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">保存</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/common.js"></script>
+    <script>
+        function updateNav() {
+            const user = getUser();
+            if (!user || (user.role !== 'ADMIN')) {
+                window.location.href = '/static/index.html';
+                return;
+            }
+            document.getElementById('navUsername').textContent = user.username;
+            document.getElementById('navUsername').classList.remove('hidden');
+            document.getElementById('navLogout').classList.remove('hidden');
+        }
+
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/user');
+                const data = await res.json();
+                const tbody = document.getElementById('userTable').querySelector('tbody');
+                if (data.code === 200) {
+                    tbody.innerHTML = data.data.map(u =>
+                        '<tr>' +
+                        '<td>' + u.id + '</td>' +
+                        '<td>' + escapeHtml(u.username) + '</td>' +
+                        '<td>' + roleName(u.role) + '</td>' +
+                        '<td>' + formatTime(u.createTime) + '</td>' +
+                        '<td>' +
+                        '<button onclick="openEdit(' + u.id + ',\'' + escapeHtml(u.username) + '\',\'' + u.role + '\')" class="btn btn-sm">编辑</button>' +
+                        '<button onclick="deleteUser(' + u.id + ')" class="btn btn-sm btn-danger">删除</button>' +
+                        '</td>' +
+                        '</tr>'
+                    ).join('');
+                }
+            } catch (e) {
+                document.getElementById('userTable').querySelector('tbody').innerHTML = '<tr><td colspan="5">加载失败</td></tr>';
+            }
+        }
+
+        function roleName(role) {
+            const map = { 'ADMIN': '管理员', 'PRESIDENT': '社长', 'MEMBER': '普通成员' };
+            return map[role] || role;
+        }
+
+        function openEdit(id, username, role) {
+            document.getElementById('editUserId').value = id;
+            document.getElementById('editUsername').value = username;
+            document.getElementById('editRole').value = role;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        async function handleEdit(e) {
+            e.preventDefault();
+            const id = document.getElementById('editUserId').value;
+            const body = {
+                username: document.getElementById('editUsername').value,
+                role: document.getElementById('editRole').value
+            };
+            try {
+                const res = await fetch('/api/user/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    alert('更新成功');
+                    closeModal('editModal');
+                    loadUsers();
+                } else {
+                    alert(data.msg);
+                }
+            } catch (e) { alert('网络错误'); }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('确定要删除该用户吗？')) return;
+            try {
+                const res = await fetch('/api/user/' + id, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.code === 200) {
+                    alert('删除成功');
+                    loadUsers();
+                } else {
+                    alert(data.msg);
+                }
+            } catch (e) { alert('网络错误'); }
+        }
+
+        updateNav();
+        loadUsers();
+    </script>
+</body>
+</html>
