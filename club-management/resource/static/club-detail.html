@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社团详情 - 社团管理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="navbar">
+            <h1>社团管理系统</h1>
+            <nav>
+                <a href="/static/index.html" class="nav-link">首页</a>
+                <a href="/static/club-list.html" class="nav-link">社团</a>
+                <a href="/static/activity-list.html" class="nav-link">活动</a>
+            </nav>
+            <div class="user-area">
+                <span id="navUsername" class="hidden"></span>
+                <a href="/static/login.html" id="navLogin" class="btn btn-sm">登录</a>
+                <button id="navLogout" onclick="logout()" class="btn btn-sm hidden">退出</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="section">
+                <a href="/static/club-list.html" class="btn btn-link">&larr; 返回社团列表</a>
+                <div id="clubDetail">
+                    <p class="loading">加载中...</p>
+                </div>
+                <div id="clubActions" class="action-bar" style="display:none">
+                    <button id="joinBtn" onclick="applyToJoin()" class="btn btn-primary">申请加入</button>
+                    <button id="quitBtn" onclick="quitClub()" class="btn btn-danger" style="display:none">退出社团</button>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3>社团活动</h3>
+                <div id="clubActivities" class="card-grid">
+                    <p class="loading">加载中...</p>
+                </div>
+            </section>
+
+            <section id="memberSection" class="section">
+                <h3>社团成员</h3>
+                <div id="memberList" class="card-grid"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/js/common.js"></script>
+    <script>
+        let clubId = null;
+
+        function getQueryParam(name) {
+            return new URLSearchParams(window.location.search).get(name);
+        }
+
+        function updateNav() {
+            const user = getUser();
+            if (user) {
+                document.getElementById('navUsername').textContent = user.username;
+                document.getElementById('navUsername').classList.remove('hidden');
+                document.getElementById('navLogin').classList.add('hidden');
+                document.getElementById('navLogout').classList.remove('hidden');
+            }
+        }
+
+        async function loadDetail() {
+            clubId = getQueryParam('id');
+            if (!clubId) { window.location.href = '/static/club-list.html'; return; }
+
+            const res = await fetch('/api/club/' + clubId);
+            const data = await res.json();
+            if (data.code !== 200) { document.getElementById('clubDetail').innerHTML = '<p>社团不存在</p>'; return; }
+
+            const club = data.data;
+            document.getElementById('clubDetail').innerHTML =
+                '<h2>' + escapeHtml(club.name) + '</h2>' +
+                '<p><strong>创建日期：</strong>' + (club.createdDate || '') + '</p>' +
+                '<p><strong>社长：</strong>' + escapeHtml(club.presidentName || '') + '</p>' +
+                '<p><strong>状态：</strong>' + (club.status === 1 ? '正常' : '禁用') + '</p>' +
+                '<div class="content-box">' + escapeHtml(club.description || '') + '</div>';
+
+            const user = getUser();
+            if (user) {
+                document.getElementById('clubActions').style.display = '';
+                checkMembership();
+            }
+
+            loadClubActivities();
+            loadMembers();
+        }
+
+        async function checkMembership() {
+            const user = getUser();
+            try {
+                const res = await fetch('/api/member/club/' + clubId + '/user/' + user.id);
+                const data = await res.json();
+                if (data.code === 200) {
+                    document.getElementById('joinBtn').style.display = 'none';
+                    document.getElementById('quitBtn').style.display = '';
+                }
+            } catch (e) {}
+        }
+
+        async function loadClubActivities() {
+            const res = await fetch('/api/activity/club/' + clubId);
+            const data = await res.json();
+            const div = document.getElementById('clubActivities');
+            if (data.code === 200 && data.data.length > 0) {
+                div.innerHTML = data.data.map(a =>
+                    '<div class="card"><h4>' + escapeHtml(a.title) + '</h4>' +
+                    '<p>地点：' + escapeHtml(a.location || '') + '</p>' +
+                    '<a href="/static/activity-detail.html?id=' + a.id + '" class="btn btn-sm">查看详情</a></div>'
+                ).join('');
+            } else {
+                div.innerHTML = '<p>暂无活动</p>';
+            }
+        }
+
+        async function loadMembers() {
+            const res = await fetch('/api/member/club/' + clubId);
+            const data = await res.json();
+            const div = document.getElementById('memberList');
+            if (data.code === 200 && data.data.length > 0) {
+                const approved = data.data.filter(m => m.status === 1);
+                div.innerHTML = approved.length > 0
+                    ? approved.map(m => '<div class="card"><p><strong>' + escapeHtml(m.username || '') + '</strong></p><p>加入日期：' + (m.joinDate || '') + '</p></div>').join('')
+                    : '<p>暂无成员</p>';
+            }
+        }
+
+        async function applyToJoin() {
+            if (!checkLogin()) { window.location.href = '/static/login.html'; return; }
+            try {
+                const res = await fetch('/api/member/apply/' + clubId, { method: 'POST' });
+                const data = await res.json();
+                alert(data.code === 200 ? '申请已提交，等待审核' : data.msg);
+            } catch (e) { alert('网络错误'); }
+        }
+
+        async function quitClub() {
+            if (!confirm('确定要退出该社团吗？')) return;
+            try {
+                const res = await fetch('/api/member/quit/' + clubId, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.code === 200) {
+                    alert('已退出社团');
+                    location.reload();
+                } else {
+                    alert(data.msg);
+                }
+            } catch (e) { alert('网络错误'); }
+        }
+
+        updateNav();
+        loadDetail();
+    </script>
+</body>
+</html>

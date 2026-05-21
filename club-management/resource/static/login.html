@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 社团管理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>社团管理系统</h1>
+            <div class="auth-tabs">
+                <a href="/static/login.html" class="tab-btn active">登录</a>
+                <a href="/static/register.html" class="tab-btn">注册</a>
+            </div>
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" class="form-control" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" class="form-control" required autocomplete="current-password">
+                </div>
+                <div id="loginError" class="error-msg hidden"></div>
+                <button type="submit" class="btn btn-primary btn-block">登录</button>
+            </form>
+        </div>
+    </div>
+    <script src="/static/js/common.js"></script>
+    <script>
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('loginError');
+
+            try {
+                const res = await fetch('/api/user/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    sessionStorage.setItem('user', JSON.stringify(data.data));
+                    window.location.href = '/static/index.html';
+                } else {
+                    errorDiv.textContent = data.msg;
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorDiv.textContent = '网络错误，请稍后重试';
+                errorDiv.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
